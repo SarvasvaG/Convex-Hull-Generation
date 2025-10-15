@@ -13,21 +13,8 @@ const MazeCanvas = forwardRef(
     const CANVAS_HEIGHT = 600;
 
     // Emoji collections for decoration
-    const PATH_EMOJIS = [
-      "⭐",
-      "🌟",
-      "✨",
-      "🦄",
-      "🍎",
-      "🍇",
-      "🍓",
-      "🍊",
-      "🎈",
-      "🎁",
-      "💎",
-      "🌸",
-    ];
-    const MONSTER_EMOJIS = ["👹", "👺", "👻", "👾", "🤖", "💀"];
+    const APPLE_EMOJI = "\uD83C\uDF4E"; // 🍎 Apple emoji
+    const MONSTER_EMOJI = "\uD83D\uDC7B"; // 👻 Ghost emoji
     const START_EMOJI = "🏁"; // Start flag
     const END_EMOJI = "🏆"; // Trophy for end
 
@@ -87,9 +74,6 @@ const MazeCanvas = forwardRef(
 
       // Passages are no longer drawn - they are just gaps in the walls
 
-      // Draw emojis along the paths
-      decorateMazeWithEmojis(ctx, mazeData, layers);
-
       // Draw dotted convex hulls if enabled
       if (showHulls && layers && layers.length > 0) {
         drawDottedHulls(ctx, layers);
@@ -104,6 +88,15 @@ const MazeCanvas = forwardRef(
       if (mazeData.endPosition) {
         drawEndPosition(ctx, mazeData.endPosition);
       }
+
+      // Draw emojis LAST to ensure they're on top (highest z-index)
+      decorateMazeWithEmojis(
+        ctx,
+        mazeData,
+        layers,
+        mazeData.startPosition,
+        mazeData.endPosition
+      );
 
       // Draw all original points (optional - controlled by showHulls prop)
       if (showHulls && points && points.length > 0) {
@@ -298,10 +291,225 @@ const MazeCanvas = forwardRef(
       ctx.restore();
     };
 
-    const decorateMazeWithEmojis = (ctx, mazeData, layers) => {
-      // Only start and end emojis will be drawn
-      // All decorative emojis (path markers and monsters) have been removed
-      // The start and end positions are drawn separately in their respective functions
+    const decorateMazeWithEmojis = (
+      ctx,
+      mazeData,
+      layers,
+      startPosition,
+      endPosition
+    ) => {
+      // Get the outermost convex hull (first layer)
+      const outermostHull = layers && layers.length > 0 ? layers[0].hull : null;
+
+      // Generate safe positions for monsters and fruits
+      const safePositions = generateSafePositions(
+        mazeData.smoothCurves,
+        15, // Number of items to place
+        30, // Minimum distance from walls
+        startPosition,
+        endPosition,
+        outermostHull
+      );
+
+      // Place monsters and apples at safe positions (alternate between them)
+      safePositions.forEach((pos, index) => {
+        // Alternate between apple and monster
+        const emoji = index % 2 === 0 ? APPLE_EMOJI : MONSTER_EMOJI;
+
+        drawEmoji(ctx, emoji, pos.x, pos.y, 24);
+      });
+    };
+
+    /**
+     * Generates safe positions for emojis that don't overlap with Bézier curves
+     * Uses a grid-based sampling approach with collision detection
+     */
+    const generateSafePositions = (
+      smoothCurves,
+      count,
+      minDistance,
+      startPosition,
+      endPosition,
+      outermostHull
+    ) => {
+      const safePositions = [];
+      const maxAttempts = 500;
+      const margin = 50; // Keep away from canvas edges
+
+      for (let i = 0; i < count && safePositions.length < count; i++) {
+        let attempts = 0;
+        let foundSafe = false;
+
+        while (attempts < maxAttempts && !foundSafe) {
+          // Generate random position within canvas bounds
+          const candidatePos = {
+            x: Math.random() * (CANVAS_WIDTH - 2 * margin) + margin,
+            y: Math.random() * (CANVAS_HEIGHT - 2 * margin) + margin,
+          };
+
+          // Check if position is inside the outermost hull
+          if (
+            outermostHull &&
+            !isPointInsidePolygon(candidatePos, outermostHull)
+          ) {
+            attempts++;
+            continue;
+          }
+
+          // Check if position is safe (not too close to walls, other emojis, or start/end)
+          if (
+            isPositionSafe(
+              candidatePos,
+              smoothCurves,
+              minDistance,
+              safePositions,
+              startPosition,
+              endPosition
+            )
+          ) {
+            safePositions.push(candidatePos);
+            foundSafe = true;
+          }
+
+          attempts++;
+        }
+      }
+
+      return safePositions;
+    };
+
+    /**
+     * Checks if a position is safe (not too close to walls or other items)
+     */
+    const isPositionSafe = (
+      pos,
+      smoothCurves,
+      minDistance,
+      existingPositions,
+      startPosition,
+      endPosition
+    ) => {
+      // Check distance from start position (avoid overlapping)
+      if (startPosition) {
+        const distToStart = Math.sqrt(
+          Math.pow(pos.x - startPosition.x, 2) +
+            Math.pow(pos.y - startPosition.y, 2)
+        );
+        if (distToStart < minDistance + 20) {
+          // Extra buffer for start
+          return false;
+        }
+      }
+
+      // Check distance from end position (avoid overlapping)
+      if (endPosition) {
+        const distToEnd = Math.sqrt(
+          Math.pow(pos.x - endPosition.x, 2) +
+            Math.pow(pos.y - endPosition.y, 2)
+        );
+        if (distToEnd < minDistance + 20) {
+          // Extra buffer for end
+          return false;
+        }
+      }
+
+      // Check distance from existing positions
+      for (const existingPos of existingPositions) {
+        const dist = Math.sqrt(
+          Math.pow(pos.x - existingPos.x, 2) +
+            Math.pow(pos.y - existingPos.y, 2)
+        );
+        if (dist < minDistance) {
+          return false;
+        }
+      }
+
+      // Check distance from all Bézier curves
+      if (smoothCurves && smoothCurves.length > 0) {
+        for (const layerCurve of smoothCurves) {
+          for (const curve of layerCurve.curves) {
+            const distToCurve = distanceToQuadraticBezier(
+              pos,
+              curve.start,
+              curve.control,
+              curve.end
+            );
+
+            if (distToCurve < minDistance) {
+              return false;
+            }
+          }
+        }
+      }
+
+      return true;
+    };
+
+    /**
+     * Calculates the minimum distance from a point to a quadratic Bézier curve
+     * Uses parametric sampling for approximation
+     */
+    const distanceToQuadraticBezier = (point, start, control, end) => {
+      let minDist = Infinity;
+      const samples = 20; // Number of samples along the curve
+
+      // Sample points along the Bézier curve
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const curvePoint = getQuadraticBezierPoint(t, start, control, end);
+
+        const dist = Math.sqrt(
+          Math.pow(point.x - curvePoint.x, 2) +
+            Math.pow(point.y - curvePoint.y, 2)
+        );
+
+        minDist = Math.min(minDist, dist);
+      }
+
+      return minDist;
+    };
+
+    /**
+     * Gets a point on a quadratic Bézier curve at parameter t (0 to 1)
+     */
+    const getQuadraticBezierPoint = (t, start, control, end) => {
+      const oneMinusT = 1 - t;
+      return {
+        x:
+          oneMinusT * oneMinusT * start.x +
+          2 * oneMinusT * t * control.x +
+          t * t * end.x,
+        y:
+          oneMinusT * oneMinusT * start.y +
+          2 * oneMinusT * t * control.y +
+          t * t * end.y,
+      };
+    };
+
+    /**
+     * Checks if a point is inside a polygon using ray casting algorithm
+     * @param {object} point - Point with x and y coordinates
+     * @param {Array} polygon - Array of points forming the polygon
+     * @returns {boolean} True if point is inside polygon
+     */
+    const isPointInsidePolygon = (point, polygon) => {
+      let inside = false;
+      const n = polygon.length;
+
+      for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = polygon[i].x;
+        const yi = polygon[i].y;
+        const xj = polygon[j].x;
+        const yj = polygon[j].y;
+
+        const intersect =
+          yi > point.y !== yj > point.y &&
+          point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
     };
 
     const drawEmoji = (ctx, emoji, x, y, size = 24) => {
