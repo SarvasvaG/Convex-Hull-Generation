@@ -2,7 +2,8 @@
 // Date: October 15, 2025
 // Controls.jsx - UI controls for point generation and step visualization
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { downloadCanvasAsImage } from "../utils/imageUtils";
 
 const Controls = ({
   onGeneratePoints,
@@ -11,6 +12,11 @@ const Controls = ({
   totalSteps,
   isAnimating,
   onToggleAnimation,
+  onGenerateMaze,
+  onToggleView,
+  viewMode = "hull",
+  hasPoints = false,
+  hasMazeData = false,
   mode = "both", // 'generate', 'visualize', or 'both'
 }) => {
   const [numPoints, setNumPoints] = useState(10);
@@ -84,6 +90,28 @@ const Controls = ({
     onToggleAnimation();
   };
 
+  const handleDownloadMaze = () => {
+    // Find the canvas element - it should be the maze canvas
+    const canvasElements = document.querySelectorAll("canvas");
+    let targetCanvas = null;
+
+    // Find the visible canvas
+    for (let canvas of canvasElements) {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        targetCanvas = canvas;
+        break;
+      }
+    }
+
+    if (targetCanvas) {
+      const filename = viewMode === "maze" ? "maze" : "convex-hull";
+      downloadCanvasAsImage(targetCanvas, filename, "png");
+    } else {
+      alert("Canvas not found. Please make sure the visualization is visible.");
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Point Generation Controls */}
@@ -116,6 +144,34 @@ const Controls = ({
             >
               Generate Points
             </button>
+
+            {/* Maze Controls */}
+            {hasPoints && (
+              <>
+                <button
+                  onClick={onGenerateMaze}
+                  className="w-full px-6 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-colors shadow-md hover:shadow-lg"
+                >
+                  🎁 Generate Maze
+                </button>
+
+                {hasMazeData && (
+                  <button
+                    onClick={onToggleView}
+                    className="w-full px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg"
+                  >
+                    {viewMode === "hull" ? "👁️ View Maze" : "👁️ View Hull"}
+                  </button>
+                )}
+
+                <button
+                  onClick={handleDownloadMaze}
+                  className="w-full px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                >
+                  💾 Download Image
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

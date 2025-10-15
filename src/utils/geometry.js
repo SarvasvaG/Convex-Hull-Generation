@@ -193,3 +193,210 @@ export function isPointInsideHull(point, hull) {
 
   return true;
 }
+
+/**
+ * Check if a point is on the convex hull boundary
+ * @param {object} point - Point to check
+ * @param {Array<object>} hull - Convex hull points
+ * @returns {boolean} True if point is on hull boundary
+ */
+export function isPointOnHullBoundary(point, hull) {
+  if (hull.length < 2) return false;
+
+  for (let i = 0; i < hull.length; i++) {
+    const j = (i + 1) % hull.length;
+
+    // Check if point is the same as a hull vertex
+    if (
+      Math.abs(point.x - hull[i].x) < 1e-9 &&
+      Math.abs(point.y - hull[i].y) < 1e-9
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Calculate centroid of a polygon
+ * @param {Array<object>} points - Array of points forming a polygon
+ * @returns {object} Centroid point with x and y coordinates
+ */
+export function calculateCentroid(points) {
+  if (!points || points.length === 0) return { x: 0, y: 0 };
+
+  let sumX = 0;
+  let sumY = 0;
+
+  points.forEach((point) => {
+    sumX += point.x;
+    sumY += point.y;
+  });
+
+  return {
+    x: sumX / points.length,
+    y: sumY / points.length,
+  };
+}
+
+/**
+ * Onion Decomposition - Recursively find convex hulls until less than 3 points remain
+ * @param {Array<object>} points - Array of all points
+ * @returns {object} Object containing layers, innermost centroid, and maze data
+ */
+export function onionDecomposition(points) {
+  if (!points || points.length < 3) {
+    return {
+      layers: [],
+      innerPoints: points || [],
+      centroid: null,
+      mazeData: null,
+    };
+  }
+
+  const layers = [];
+  let remainingPoints = [...points];
+
+  // Keep finding convex hulls until we have less than 3 points
+  while (remainingPoints.length >= 3) {
+    const hullResult = jarvisMarchAlgorithm(remainingPoints);
+    const hullPoints = hullResult.hullPoints;
+
+    if (hullPoints.length < 3) break;
+
+    layers.push({
+      hull: hullPoints,
+      layerIndex: layers.length,
+    });
+
+    // Filter out points that are on the hull boundary
+    remainingPoints = remainingPoints.filter(
+      (point) => !isPointOnHullBoundary(point, hullPoints)
+    );
+  }
+
+  // Calculate centroid of innermost layer or remaining points
+  let centroid;
+  if (layers.length > 0) {
+    const innermostLayer = layers[layers.length - 1];
+    centroid = calculateCentroid(innermostLayer.hull);
+  } else if (remainingPoints.length > 0) {
+    centroid = calculateCentroid(remainingPoints);
+  } else {
+    centroid = { x: 0, y: 0 };
+  }
+
+  // Generate maze structure by removing edges
+  const mazeData = generateMazeStructure(layers, centroid);
+
+  return {
+    layers: layers,
+    innerPoints: remainingPoints,
+    centroid: centroid,
+    mazeData: mazeData,
+  };
+}
+
+/**
+ * Generate maze structure by removing specific edges from each layer
+ * Creates a solvable maze by removing exactly one edge per layer
+ * @param {Array<object>} layers - Convex hull layers
+ * @param {object} centroid - Centroid of innermost layer (start position)
+ * @returns {object} Maze data with edges to keep, edges to remove, start and end positions
+ */
+export function generateMazeStructure(layers, centroid) {
+  if (!layers || layers.length === 0) {
+    return {
+      edgesToKeep: [],
+      edgesToRemove: [],
+      passages: [],
+      startPosition: centroid,
+      endPosition: null,
+    };
+  }
+
+  const edgesToKeep = [];
+  const edgesToRemove = [];
+  const passages = [];
+
+  // For each layer, remove exactly one edge to create passages
+  layers.forEach((layer, layerIndex) => {
+    const hull = layer.hull;
+    const numEdges = hull.length;
+
+    // Remove exactly one edge from each layer
+    const edgesToRemoveIndices = new Set();
+
+    // Randomly select exactly one edge to remove
+    const randomIndex = Math.floor(Math.random() * numEdges);
+    edgesToRemoveIndices.add(randomIndex);
+
+    // Separate edges into keep and remove
+    for (let i = 0; i < hull.length; i++) {
+      const j = (i + 1) % hull.length;
+      const edge = {
+        from: hull[i],
+        to: hull[j],
+        layerIndex: layerIndex,
+        edgeIndex: i,
+      };
+
+      if (edgesToRemoveIndices.has(i)) {
+        edgesToRemove.push(edge);
+
+        // Calculate midpoint for passage marker
+        const midpoint = {
+          x: (edge.from.x + edge.to.x) / 2,
+          y: (edge.from.y + edge.to.y) / 2,
+        };
+        passages.push({
+          ...edge,
+          midpoint: midpoint,
+        });
+      } else {
+        edgesToKeep.push(edge);
+      }
+    }
+  });
+
+  // Start position is near the centroid
+  const startPosition = centroid;
+
+  // End position is near a removed edge of the outermost layer
+  let endPosition = null;
+  if (edgesToRemove.length > 0) {
+    // Find removed edges from outermost layer
+    const outermostRemovedEdges = edgesToRemove.filter(
+      (edge) => edge.layerIndex === 0
+    );
+
+    if (outermostRemovedEdges.length > 0) {
+      const endEdge =
+        outermostRemovedEdges[
+          Math.floor(Math.random() * outermostRemovedEdges.length)
+        ];
+      endPosition = {
+        x: (endEdge.from.x + endEdge.to.x) / 2,
+        y: (endEdge.from.y + endEdge.to.y) / 2,
+        edge: endEdge,
+      };
+    }
+  }
+
+  // If no end position found, use a point on the outermost layer
+  if (!endPosition && layers.length > 0) {
+    const outermostHull = layers[0].hull;
+    const randomPoint =
+      outermostHull[Math.floor(Math.random() * outermostHull.length)];
+    endPosition = { x: randomPoint.x, y: randomPoint.y };
+  }
+
+  return {
+    edgesToKeep: edgesToKeep,
+    edgesToRemove: edgesToRemove,
+    passages: passages,
+    startPosition: startPosition,
+    endPosition: endPosition,
+  };
+}
