@@ -7,7 +7,7 @@ import React, { useEffect, useRef } from "react";
 const Canvas = ({ points, currentStep, steps, isAnimating }) => {
   const canvasRef = useRef(null);
   const POINT_RADIUS = 6;
-  const CANVAS_WIDTH = 800;
+  const CANVAS_WIDTH = 900;
   const CANVAS_HEIGHT = 600;
 
   useEffect(() => {
@@ -239,18 +239,19 @@ const Canvas = ({ points, currentStep, steps, isAnimating }) => {
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-full">
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        className="border-2 border-gray-300 rounded-lg shadow-lg bg-white"
+        className="border-2 border-gray-300 rounded-lg shadow-lg bg-white max-w-full"
+        style={{ maxWidth: "100%", height: "auto" }}
       />
       {steps &&
         steps.length > 0 &&
         currentStep >= 0 &&
         currentStep < steps.length && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl">
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
             <p className="text-sm text-blue-900 font-medium">
               Step {currentStep + 1} of {steps.length}:{" "}
               {steps[currentStep].message}
