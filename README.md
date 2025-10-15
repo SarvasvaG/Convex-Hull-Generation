@@ -141,12 +141,15 @@ npm run preview
 
    - 🏁 **Green flag**: Start position (center of innermost layer)
    - 🏆 **Golden trophy**: End position (exit at outer layer)
-   - **Colored walls**: Each layer has a different color
-   - **Passages**: Dashed green lines indicate openings between layers
+   - **Smooth Colored Curves**: Each layer has flowing Bézier curves in different colors
+   - **Passages**: Gaps in the curves indicate openings between layers (no dashed lines)
+   - **Convex Hulls**: Optional - toggle dotted hull overlay with "Show Hulls" button
+   - **Points**: Visible when hulls are shown
 
 3. **Interactive Features:**
 
    - Click "👁️ View Maze" or "👁️ View Hull" to toggle between modes
+   - Click "◻️ Show Hulls" / "� Hide Hulls" to toggle convex hull overlay visibility
    - Click "💾 Download Image" to save the visualization as PNG
    - Perfect for printing and giving to kids as educational puzzles!
 
@@ -184,14 +187,19 @@ The Onion Decomposition creates maze-like structures by:
    - Repeat until less than 3 points remain
 2. **Maze Generation**:
 
+   2. **Maze Generation**:
+
    - Each hull layer becomes a "wall" of the maze
    - Exactly one edge is removed from each layer to create passages
+   - Quadratic Bézier curves smooth the polygon vertices into flowing curves
+   - Uses three consecutive points to generate each curve segment
    - Ensures connectivity between layers
 
 3. **Path Planning**:
    - Place **start marker** (🏁) at the centroid of the innermost layer
    - Place **end marker** (🏆) at a removed edge of the outermost layer
    - Visual passages marked with dashed lines
+   - Smooth curve rendering for aesthetic appeal
 
 **Time Complexity:** O(n²h), where:
 
@@ -234,6 +242,7 @@ The Onion Decomposition creates maze-like structures by:
 - `jarvisMarchAlgorithm()`: Implements the convex hull algorithm
 - `onionDecomposition()`: Recursively computes convex hull layers
 - `generateMazeStructure()`: Creates solvable maze by removing strategic edges
+- `generateSmoothCurve()`: Generates quadratic Bézier curves from polygon vertices
 - `calculateCentroid()`: Finds center point of a polygon
 - Helper functions for geometric calculations
 
@@ -265,6 +274,7 @@ The Onion Decomposition creates maze-like structures by:
 ### Maze Generation (NEW!)
 
 - **Onion Layers**: Multiple convex hull layers create maze structure
+- **Smooth Curves**: Bézier curve smoothing creates organic, flowing walls instead of sharp polygons
 - **Single Passage Per Layer**: Exactly one edge removed from each layer
 - **Visual Feedback**: Color-coded layers (red for outermost to violet for innermost)
 - **Clear Markers**: Start (🏁) and end (🏆) positions clearly marked

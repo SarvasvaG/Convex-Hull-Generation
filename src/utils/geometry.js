@@ -299,6 +299,47 @@ export function onionDecomposition(points) {
 }
 
 /**
+ * Generate smooth Bézier curve path for a convex hull using quadratic curves
+ * @param {Array<object>} hull - Array of hull points in order
+ * @returns {Array<object>} Array of curve segments with control points
+ */
+export function generateSmoothCurve(hull) {
+  if (!hull || hull.length < 3) {
+    return [];
+  }
+
+  const curveSegments = [];
+  const n = hull.length;
+
+  // For each point, create a quadratic Bézier curve using it as control point
+  for (let i = 0; i < n; i++) {
+    const p0 = hull[i];
+    const p1 = hull[(i + 1) % n];
+    const p2 = hull[(i + 2) % n];
+
+    // Calculate midpoints
+    const mid1 = {
+      x: (p0.x + p1.x) / 2,
+      y: (p0.y + p1.y) / 2,
+    };
+    const mid2 = {
+      x: (p1.x + p2.x) / 2,
+      y: (p1.y + p2.y) / 2,
+    };
+
+    // Create quadratic Bézier curve: from mid1 to mid2, with p1 as control point
+    curveSegments.push({
+      start: mid1,
+      control: p1,
+      end: mid2,
+      segmentIndex: i,
+    });
+  }
+
+  return curveSegments;
+}
+
+/**
  * Generate maze structure by removing specific edges from each layer
  * Creates a solvable maze by removing exactly one edge per layer
  * @param {Array<object>} layers - Convex hull layers
@@ -311,6 +352,7 @@ export function generateMazeStructure(layers, centroid) {
       edgesToKeep: [],
       edgesToRemove: [],
       passages: [],
+      smoothCurves: [],
       startPosition: centroid,
       endPosition: null,
     };
@@ -319,11 +361,19 @@ export function generateMazeStructure(layers, centroid) {
   const edgesToKeep = [];
   const edgesToRemove = [];
   const passages = [];
+  const smoothCurves = [];
 
   // For each layer, remove exactly one edge to create passages
   layers.forEach((layer, layerIndex) => {
     const hull = layer.hull;
     const numEdges = hull.length;
+
+    // Generate smooth curve segments for this layer
+    const layerCurves = generateSmoothCurve(hull);
+    smoothCurves.push({
+      layerIndex: layerIndex,
+      curves: layerCurves,
+    });
 
     // Remove exactly one edge from each layer
     const edgesToRemoveIndices = new Set();
@@ -396,6 +446,7 @@ export function generateMazeStructure(layers, centroid) {
     edgesToKeep: edgesToKeep,
     edgesToRemove: edgesToRemove,
     passages: passages,
+    smoothCurves: smoothCurves,
     startPosition: startPosition,
     endPosition: endPosition,
   };

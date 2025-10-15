@@ -14,9 +14,11 @@ const Controls = ({
   onToggleAnimation,
   onGenerateMaze,
   onToggleView,
+  onToggleMazeHulls,
   viewMode = "hull",
   hasPoints = false,
   hasMazeData = false,
+  showMazeHulls = false,
   mode = "both", // 'generate', 'visualize', or 'both'
 }) => {
   const [numPoints, setNumPoints] = useState(10);
@@ -161,6 +163,15 @@ const Controls = ({
                     className="w-full px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg"
                   >
                     {viewMode === "hull" ? "👁️ View Maze" : "👁️ View Hull"}
+                  </button>
+                )}
+
+                {hasMazeData && viewMode === "maze" && (
+                  <button
+                    onClick={onToggleMazeHulls}
+                    className="w-full px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
+                  >
+                    {showMazeHulls ? "� Hide Hulls" : "◻️ Show Hulls"}
                   </button>
                 )}
 

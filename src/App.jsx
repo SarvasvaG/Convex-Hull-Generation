@@ -19,6 +19,7 @@ function App() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [viewMode, setViewMode] = useState("hull"); // "hull" or "maze"
   const [onionData, setOnionData] = useState(null);
+  const [showMazeHulls, setShowMazeHulls] = useState(false);
 
   const CANVAS_WIDTH = 900;
   const CANVAS_HEIGHT = 600;
@@ -68,6 +69,10 @@ function App() {
     } else {
       setViewMode("hull");
     }
+  };
+
+  const handleToggleMazeHulls = () => {
+    setShowMazeHulls((prev) => !prev);
   };
 
   const handleStepChange = (step) => {
@@ -122,9 +127,11 @@ function App() {
                 onToggleAnimation={handleToggleAnimation}
                 onGenerateMaze={handleGenerateMaze}
                 onToggleView={handleToggleView}
+                onToggleMazeHulls={handleToggleMazeHulls}
                 viewMode={viewMode}
                 hasPoints={points.length > 0}
                 hasMazeData={onionData !== null}
+                showMazeHulls={showMazeHulls}
                 mode="generate"
               />
             </div>
@@ -144,9 +151,11 @@ function App() {
                   onToggleAnimation={handleToggleAnimation}
                   onGenerateMaze={handleGenerateMaze}
                   onToggleView={handleToggleView}
+                  onToggleMazeHulls={handleToggleMazeHulls}
                   viewMode={viewMode}
                   hasPoints={points.length > 0}
                   hasMazeData={onionData !== null}
+                  showMazeHulls={showMazeHulls}
                   mode="visualize"
                 />
               </div>
@@ -313,7 +322,11 @@ function App() {
                   isAnimating={isAnimating}
                 />
               ) : (
-                <MazeCanvas points={points} onionData={onionData} />
+                <MazeCanvas
+                  points={points}
+                  onionData={onionData}
+                  showHulls={showMazeHulls}
+                />
               )}
             </div>
           </div>
