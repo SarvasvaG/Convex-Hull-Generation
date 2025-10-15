@@ -37,10 +37,12 @@ const Canvas = ({ points, currentStep, steps, isAnimating }) => {
     // Draw convex hull edges up to current step
     if (steps && steps.length > 0 && currentStep >= 0) {
       const relevantSteps = steps.slice(0, currentStep + 1);
+      const isLastStep = currentStep === steps.length - 1;
 
       // Draw all completed edges
       relevantSteps.forEach((step, idx) => {
-        const isCurrentEdge = idx === currentStep;
+        // Only show current edge as "current" if it's not the last step
+        const isCurrentEdge = idx === currentStep && !isLastStep;
         drawEdge(ctx, step.edge[0], step.edge[1], isCurrentEdge);
       });
 
@@ -52,8 +54,8 @@ const Canvas = ({ points, currentStep, steps, isAnimating }) => {
         });
       }
 
-      // Draw current edge being formed with animation
-      if (isAnimating && currentStep < steps.length) {
+      // Draw current edge being formed with animation (but not on the last step)
+      if (isAnimating && currentStep < steps.length - 1) {
         const step = steps[currentStep];
         drawAnimatedEdge(ctx, step.edge[0], step.edge[1]);
       }
