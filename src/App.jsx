@@ -58,7 +58,10 @@ function App() {
     const onionResult = onionDecomposition(points);
     // Compute emoji positions once for this maze and persist in parent and onionData
     try {
-      const outermostHull = onionResult.layers && onionResult.layers.length > 0 ? onionResult.layers[0].hull : null;
+      const outermostHull =
+        onionResult.layers && onionResult.layers.length > 0
+          ? onionResult.layers[0].hull
+          : null;
       const layerCount = onionResult.layers ? onionResult.layers.length : 0;
       const safePositions = generateSafePositionsForApp(
         onionResult.mazeData?.smoothCurves || [],
@@ -129,7 +132,9 @@ function App() {
           yi = polygon[i].y;
         const xj = polygon[j].x,
           yj = polygon[j].y;
-        const intersect = yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+        const intersect =
+          yi > point.y !== yj > point.y &&
+          point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
         if (intersect) inside = !inside;
       }
       return inside;
@@ -141,28 +146,57 @@ function App() {
       for (let i = 0; i <= samples; i++) {
         const t = i / samples;
         const oneMinusT = 1 - t;
-        const cx = oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x;
-        const cy = oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y;
+        const cx =
+          oneMinusT * oneMinusT * start.x +
+          2 * oneMinusT * t * control.x +
+          t * t * end.x;
+        const cy =
+          oneMinusT * oneMinusT * start.y +
+          2 * oneMinusT * t * control.y +
+          t * t * end.y;
         const dist = Math.hypot(point.x - cx, point.y - cy);
         if (dist < minDist) minDist = dist;
       }
       return minDist;
     };
 
-    const isPositionSafe = (pos, smoothCurves, minDistance, existingPositions, startPosition, endPosition) => {
+    const isPositionSafe = (
+      pos,
+      smoothCurves,
+      minDistance,
+      existingPositions,
+      startPosition,
+      endPosition
+    ) => {
       if (startPosition) {
-        if (Math.hypot(pos.x - startPosition.x, pos.y - startPosition.y) < minDistance + 20) return false;
+        if (
+          Math.hypot(pos.x - startPosition.x, pos.y - startPosition.y) <
+          minDistance + 20
+        )
+          return false;
       }
       if (endPosition) {
-        if (Math.hypot(pos.x - endPosition.x, pos.y - endPosition.y) < minDistance + 20) return false;
+        if (
+          Math.hypot(pos.x - endPosition.x, pos.y - endPosition.y) <
+          minDistance + 20
+        )
+          return false;
       }
       for (const existingPos of existingPositions) {
-        if (Math.hypot(pos.x - existingPos.x, pos.y - existingPos.y) < minDistance) return false;
+        if (
+          Math.hypot(pos.x - existingPos.x, pos.y - existingPos.y) < minDistance
+        )
+          return false;
       }
       if (smoothCurves && smoothCurves.length > 0) {
         for (const layerCurve of smoothCurves) {
           for (const curve of layerCurve.curves) {
-            const distToCurve = distanceToQuadraticBezier(pos, curve.start, curve.control, curve.end);
+            const distToCurve = distanceToQuadraticBezier(
+              pos,
+              curve.start,
+              curve.control,
+              curve.end
+            );
             if (distToCurve < minDistance) return false;
           }
         }
@@ -174,9 +208,24 @@ function App() {
       let attempts = 0;
       let found = false;
       while (attempts < maxAttempts && !found) {
-        const candidate = { x: Math.random() * (canvasWidth - 2 * margin) + margin, y: Math.random() * (canvasHeight - 2 * margin) + margin };
-        if (outermostHull && !isPointInsidePolygon(candidate, outermostHull)) { attempts++; continue; }
-        if (isPositionSafe(candidate, smoothCurves, minDistance, safePositions, startPosition, endPosition)) {
+        const candidate = {
+          x: Math.random() * (canvasWidth - 2 * margin) + margin,
+          y: Math.random() * (canvasHeight - 2 * margin) + margin,
+        };
+        if (outermostHull && !isPointInsidePolygon(candidate, outermostHull)) {
+          attempts++;
+          continue;
+        }
+        if (
+          isPositionSafe(
+            candidate,
+            smoothCurves,
+            minDistance,
+            safePositions,
+            startPosition,
+            endPosition
+          )
+        ) {
           safePositions.push(candidate);
           found = true;
         }
