@@ -19,6 +19,7 @@ function App() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [viewMode, setViewMode] = useState("hull"); // "hull" or "maze"
   const [onionData, setOnionData] = useState(null);
+  const [emojiPositions, setEmojiPositions] = useState([]);
   const [showMazeHulls, setShowMazeHulls] = useState(false);
 
   const CANVAS_WIDTH = 900;
@@ -55,7 +56,40 @@ function App() {
 
     // Compute onion decomposition
     const onionResult = onionDecomposition(points);
-    setOnionData(onionResult);
+    // Compute emoji positions once for this maze and persist in parent and onionData
+    try {
+      const outermostHull =
+        onionResult.layers && onionResult.layers.length > 0
+          ? onionResult.layers[0].hull
+          : null;
+      const layerCount = onionResult.layers ? onionResult.layers.length : 0;
+      const safePositions = generateSafePositionsForApp(
+        onionResult.mazeData?.smoothCurves || [],
+        Math.max(1, layerCount),
+        30,
+        onionResult.mazeData?.startPosition,
+        onionResult.mazeData?.endPosition,
+        outermostHull,
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT
+      );
+
+      // Attach emoji positions to mazeData and set onionData atomically
+      const onionWithEmojis = {
+        ...onionResult,
+        mazeData: {
+          ...(onionResult.mazeData || {}),
+          emojiPositions: safePositions,
+        },
+      };
+
+      setOnionData(onionWithEmojis);
+      setEmojiPositions(safePositions);
+    } catch (e) {
+      // Fallback: set onionData and empty positions
+      setOnionData(onionResult);
+      setEmojiPositions([]);
+    }
     setViewMode("maze");
   };
 
@@ -73,6 +107,132 @@ function App() {
 
   const handleToggleMazeHulls = () => {
     setShowMazeHulls((prev) => !prev);
+  };
+
+  // Helper: generate safe emoji positions for maze (simple sampling)
+  const generateSafePositionsForApp = (
+    smoothCurves,
+    count,
+    minDistance,
+    startPosition,
+    endPosition,
+    outermostHull,
+    canvasWidth,
+    canvasHeight
+  ) => {
+    const safePositions = [];
+    const maxAttempts = 500;
+    const margin = 50;
+
+    const isPointInsidePolygon = (point, polygon) => {
+      if (!polygon || polygon.length === 0) return false;
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x,
+          yi = polygon[i].y;
+        const xj = polygon[j].x,
+          yj = polygon[j].y;
+        const intersect =
+          yi > point.y !== yj > point.y &&
+          point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const distanceToQuadraticBezier = (point, start, control, end) => {
+      let minDist = Infinity;
+      const samples = 20;
+      for (let i = 0; i <= samples; i++) {
+        const t = i / samples;
+        const oneMinusT = 1 - t;
+        const cx =
+          oneMinusT * oneMinusT * start.x +
+          2 * oneMinusT * t * control.x +
+          t * t * end.x;
+        const cy =
+          oneMinusT * oneMinusT * start.y +
+          2 * oneMinusT * t * control.y +
+          t * t * end.y;
+        const dist = Math.hypot(point.x - cx, point.y - cy);
+        if (dist < minDist) minDist = dist;
+      }
+      return minDist;
+    };
+
+    const isPositionSafe = (
+      pos,
+      smoothCurves,
+      minDistance,
+      existingPositions,
+      startPosition,
+      endPosition
+    ) => {
+      if (startPosition) {
+        if (
+          Math.hypot(pos.x - startPosition.x, pos.y - startPosition.y) <
+          minDistance + 20
+        )
+          return false;
+      }
+      if (endPosition) {
+        if (
+          Math.hypot(pos.x - endPosition.x, pos.y - endPosition.y) <
+          minDistance + 20
+        )
+          return false;
+      }
+      for (const existingPos of existingPositions) {
+        if (
+          Math.hypot(pos.x - existingPos.x, pos.y - existingPos.y) < minDistance
+        )
+          return false;
+      }
+      if (smoothCurves && smoothCurves.length > 0) {
+        for (const layerCurve of smoothCurves) {
+          for (const curve of layerCurve.curves) {
+            const distToCurve = distanceToQuadraticBezier(
+              pos,
+              curve.start,
+              curve.control,
+              curve.end
+            );
+            if (distToCurve < minDistance) return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    for (let i = 0; i < count && safePositions.length < count; i++) {
+      let attempts = 0;
+      let found = false;
+      while (attempts < maxAttempts && !found) {
+        const candidate = {
+          x: Math.random() * (canvasWidth - 2 * margin) + margin,
+          y: Math.random() * (canvasHeight - 2 * margin) + margin,
+        };
+        if (outermostHull && !isPointInsidePolygon(candidate, outermostHull)) {
+          attempts++;
+          continue;
+        }
+        if (
+          isPositionSafe(
+            candidate,
+            smoothCurves,
+            minDistance,
+            safePositions,
+            startPosition,
+            endPosition
+          )
+        ) {
+          safePositions.push(candidate);
+          found = true;
+        }
+        attempts++;
+      }
+    }
+    return safePositions;
   };
 
   const handleStepChange = (step) => {
@@ -326,6 +486,7 @@ function App() {
                   points={points}
                   onionData={onionData}
                   showHulls={showMazeHulls}
+                  emojiPositions={emojiPositions}
                 />
               )}
             </div>
