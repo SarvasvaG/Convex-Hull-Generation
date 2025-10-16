@@ -576,12 +576,15 @@ const MazeCanvas = forwardRef(
     };
 
     return (
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        className="border border-gray-300 rounded-lg shadow-lg"
-      />
+      <div className="flex flex-col items-center w-full">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          className="border border-gray-300 rounded-lg shadow-lg bg-white max-w-full"
+          style={{ maxWidth: "100%", height: "auto" }}
+        />
+      </div>
     );
   }
 );
