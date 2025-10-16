@@ -6,7 +6,7 @@ import React, { useEffect, useRef, forwardRef, useState } from "react";
 import mazeBackground from "../assets/maze-background.jpg";
 
 const MazeCanvas = forwardRef(
-  ({ points, onionData, showHulls = false }, ref) => {
+  ({ points, onionData, showHulls = false, emojiPositions = [] }, ref) => {
     const canvasRef = useRef(null);
     const [backgroundImage, setBackgroundImage] = useState(null);
     const CANVAS_WIDTH = 900;
@@ -26,6 +26,8 @@ const MazeCanvas = forwardRef(
         setBackgroundImage(img);
       };
     }, []);
+
+    // Emoji positions are provided by parent via prop (emojiPositions)
 
     useEffect(() => {
       const canvas = canvasRef.current;
@@ -298,26 +300,15 @@ const MazeCanvas = forwardRef(
       startPosition,
       endPosition
     ) => {
-      // Get the outermost convex hull (first layer)
-      const outermostHull = layers && layers.length > 0 ? layers[0].hull : null;
-
-      // Generate safe positions for monsters and fruits
-      const safePositions = generateSafePositions(
-        mazeData.smoothCurves,
-        15, // Number of items to place
-        30, // Minimum distance from walls
-        startPosition,
-        endPosition,
-        outermostHull
-      );
-
-      // Place monsters and apples at safe positions (alternate between them)
-      safePositions.forEach((pos, index) => {
-        // Alternate between apple and monster
-        const emoji = index % 2 === 0 ? APPLE_EMOJI : MONSTER_EMOJI;
-
-        drawEmoji(ctx, emoji, pos.x, pos.y, 24);
-      });
+      // Prefer emoji positions attached to mazeData, otherwise use parent prop
+      const positions =
+        (mazeData && mazeData.emojiPositions) || emojiPositions || [];
+      if (positions && positions.length > 0) {
+        positions.forEach((pos, index) => {
+          const emoji = index % 2 === 0 ? APPLE_EMOJI : MONSTER_EMOJI;
+          drawEmoji(ctx, emoji, pos.x, pos.y, 24);
+        });
+      }
     };
 
     /**
