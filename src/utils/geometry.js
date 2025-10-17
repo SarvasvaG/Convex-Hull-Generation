@@ -424,13 +424,20 @@ export function generateSmoothCurve(hull) {
 }
 
 /**
- * Generate maze structure by removing specific edges from each layer
- * Creates a solvable maze by removing exactly one edge per layer
+ * Generate maze structure by creating small gaps in edges of each layer
+ * Instead of removing entire edges, creates small openings with intermediate points
  * @param {Array<object>} layers - Convex hull layers
  * @param {object} centroid - Centroid of innermost layer (start position)
- * @returns {object} Maze data with edges to keep, edges to remove, start and end positions
+ * @param {number} gapSize - Size of the gap opening (default: 20 pixels)
+ * @param {number} edgeMargin - Minimum distance from edge endpoints (default: 30 pixels)
+ * @returns {object} Maze data with edges to keep, gaps, start and end positions
  */
-export function generateMazeStructure(layers, centroid) {
+export function generateMazeStructure(
+  layers,
+  centroid,
+  gapSize = 20,
+  edgeMargin = 30
+) {
   if (!layers || layers.length === 0) {
     return {
       edgesToKeep: [],
@@ -439,6 +446,7 @@ export function generateMazeStructure(layers, centroid) {
       smoothCurves: [],
       startPosition: centroid,
       endPosition: null,
+      gaps: [],
     };
   }
 
@@ -446,48 +454,152 @@ export function generateMazeStructure(layers, centroid) {
   const edgesToRemove = [];
   const passages = [];
   const smoothCurves = [];
+  const gaps = []; // Track gap positions
 
-  // For each layer, remove exactly one edge to create passages
+  // For each layer, create a small gap in one edge
   layers.forEach((layer, layerIndex) => {
     const hull = layer.hull;
     const numEdges = hull.length;
 
-    // Generate smooth curve segments for this layer
-    const layerCurves = generateSmoothCurve(hull);
+    // Create modified hull with intermediate points for gap creation
+    const modifiedHull = [];
+    let completeEdgeRemoved = false;
+
+    // Randomly select one edge to create a gap
+    const gapEdgeIndex = Math.floor(Math.random() * numEdges);
+
+    for (let i = 0; i < hull.length; i++) {
+      const currentPoint = hull[i];
+      const nextPoint = hull[(i + 1) % hull.length];
+
+      if (i === gapEdgeIndex) {
+        // This is the edge where we'll create a gap
+        const edgeLength = Math.sqrt(
+          Math.pow(nextPoint.x - currentPoint.x, 2) +
+            Math.pow(nextPoint.y - currentPoint.y, 2)
+        );
+
+        // Check if edge is long enough for a small gap
+        if (edgeLength > 2 * edgeMargin + gapSize) {
+          // Edge is long enough - create small gap with intermediate points
+          modifiedHull.push(currentPoint);
+
+          // Choose random position along the edge (with margin from endpoints)
+          const minT = edgeMargin / edgeLength;
+          const maxT = (edgeLength - edgeMargin - gapSize) / edgeLength;
+          const gapStartT = minT + Math.random() * (maxT - minT);
+          const gapEndT = gapStartT + gapSize / edgeLength;
+
+          // Calculate gap start and end points
+          const gapStart = {
+            x: currentPoint.x + gapStartT * (nextPoint.x - currentPoint.x),
+            y: currentPoint.y + gapStartT * (nextPoint.y - currentPoint.y),
+          };
+          const gapEnd = {
+            x: currentPoint.x + gapEndT * (nextPoint.x - currentPoint.x),
+            y: currentPoint.y + gapEndT * (nextPoint.y - currentPoint.y),
+          };
+
+          // Add intermediate points to the modified hull
+          modifiedHull.push(gapStart);
+          modifiedHull.push(gapEnd);
+
+          // Track the gap for rendering
+          gaps.push({
+            layerIndex: layerIndex,
+            edgeIndex: i,
+            gapStart: gapStart,
+            gapEnd: gapEnd,
+            gapType: "small",
+            midpoint: {
+              x: (gapStart.x + gapEnd.x) / 2,
+              y: (gapStart.y + gapEnd.y) / 2,
+            },
+          });
+
+          // Add passage marker
+          passages.push({
+            from: gapStart,
+            to: gapEnd,
+            layerIndex: layerIndex,
+            edgeIndex: i,
+            midpoint: {
+              x: (gapStart.x + gapEnd.x) / 2,
+              y: (gapStart.y + gapEnd.y) / 2,
+            },
+          });
+        } else {
+          // Edge is too short - remove the entire edge
+          modifiedHull.push(currentPoint);
+          // Don't add nextPoint - this creates a gap from currentPoint directly to the point after nextPoint
+          completeEdgeRemoved = true;
+
+          // Track the complete edge removal
+          gaps.push({
+            layerIndex: layerIndex,
+            edgeIndex: i,
+            gapStart: currentPoint,
+            gapEnd: nextPoint,
+            gapType: "complete",
+            midpoint: {
+              x: (currentPoint.x + nextPoint.x) / 2,
+              y: (currentPoint.y + nextPoint.y) / 2,
+            },
+          });
+
+          // Add passage marker for complete edge
+          passages.push({
+            from: currentPoint,
+            to: nextPoint,
+            layerIndex: layerIndex,
+            edgeIndex: i,
+            midpoint: {
+              x: (currentPoint.x + nextPoint.x) / 2,
+              y: (currentPoint.y + nextPoint.y) / 2,
+            },
+          });
+        }
+      } else {
+        // Normal edge - keep it
+        modifiedHull.push(currentPoint);
+      }
+    }
+
+    // Generate smooth curve segments for this layer using the modified hull
+    const layerCurves = generateSmoothCurve(modifiedHull);
     smoothCurves.push({
       layerIndex: layerIndex,
       curves: layerCurves,
+      modifiedHull: modifiedHull,
+      gapEdgeIndex: gapEdgeIndex,
     });
 
-    // Remove exactly one edge from each layer
-    const edgesToRemoveIndices = new Set();
+    // Create edges from the modified hull
+    for (let i = 0; i < modifiedHull.length; i++) {
+      const j = (i + 1) % modifiedHull.length;
+      const from = modifiedHull[i];
+      const to = modifiedHull[j];
 
-    // Randomly select exactly one edge to remove
-    const randomIndex = Math.floor(Math.random() * numEdges);
-    edgesToRemoveIndices.add(randomIndex);
+      // Check if this edge is part of a gap
+      const isGap = gaps.some(
+        (gap) =>
+          gap.layerIndex === layerIndex &&
+          Math.abs(from.x - gap.gapStart.x) < 0.1 &&
+          Math.abs(from.y - gap.gapStart.y) < 0.1 &&
+          Math.abs(to.x - gap.gapEnd.x) < 0.1 &&
+          Math.abs(to.y - gap.gapEnd.y) < 0.1
+      );
 
-    // Separate edges into keep and remove
-    for (let i = 0; i < hull.length; i++) {
-      const j = (i + 1) % hull.length;
       const edge = {
-        from: hull[i],
-        to: hull[j],
+        from: from,
+        to: to,
         layerIndex: layerIndex,
         edgeIndex: i,
+        isGap: isGap,
       };
 
-      if (edgesToRemoveIndices.has(i)) {
+      if (isGap) {
         edgesToRemove.push(edge);
-
-        // Calculate midpoint for passage marker
-        const midpoint = {
-          x: (edge.from.x + edge.to.x) / 2,
-          y: (edge.from.y + edge.to.y) / 2,
-        };
-        passages.push({
-          ...edge,
-          midpoint: midpoint,
-        });
       } else {
         edgesToKeep.push(edge);
       }
@@ -497,34 +609,12 @@ export function generateMazeStructure(layers, centroid) {
   // Start position is near the centroid
   const startPosition = centroid;
 
-  // End position is near a removed edge of the outermost layer
-  let endPosition = null;
-  if (edgesToRemove.length > 0) {
-    // Find removed edges from outermost layer
-    const outermostRemovedEdges = edgesToRemove.filter(
-      (edge) => edge.layerIndex === 0
-    );
-
-    if (outermostRemovedEdges.length > 0) {
-      const endEdge =
-        outermostRemovedEdges[
-          Math.floor(Math.random() * outermostRemovedEdges.length)
-        ];
-      endPosition = {
-        x: (endEdge.from.x + endEdge.to.x) / 2,
-        y: (endEdge.from.y + endEdge.to.y) / 2,
-        edge: endEdge,
-      };
-    }
-  }
-
-  // If no end position found, use a point on the outermost layer
-  if (!endPosition && layers.length > 0) {
-    const outermostHull = layers[0].hull;
-    const randomPoint =
-      outermostHull[Math.floor(Math.random() * outermostHull.length)];
-    endPosition = { x: randomPoint.x, y: randomPoint.y };
-  }
+  // End position is at the bottom left corner of the canvas
+  // Assuming standard canvas dimensions of 900x600 with 50px padding
+  const endPosition = {
+    x: 70, // Bottom left with some padding
+    y: 550, // Bottom with some padding
+  };
 
   return {
     edgesToKeep: edgesToKeep,
@@ -533,5 +623,6 @@ export function generateMazeStructure(layers, centroid) {
     smoothCurves: smoothCurves,
     startPosition: startPosition,
     endPosition: endPosition,
+    gaps: gaps,
   };
 }

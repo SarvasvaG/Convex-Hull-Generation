@@ -63,9 +63,10 @@ function App() {
           ? onionResult.layers[0].hull
           : null;
       const layerCount = onionResult.layers ? onionResult.layers.length : 0;
+      // Generate 2x layer count positions so we get layerCount apples + layerCount ghosts
       const safePositions = generateSafePositionsForApp(
         onionResult.mazeData?.smoothCurves || [],
-        Math.max(1, layerCount),
+        Math.max(2, layerCount * 2),
         30,
         onionResult.mazeData?.startPosition,
         onionResult.mazeData?.endPosition,
@@ -420,35 +421,6 @@ function App() {
                     </p>
                   </div>
                 </div>
-
-                {/* Point Color Legend - shown when hulls are visible */}
-                {showMazeHulls && (
-                  <div className="mt-3">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                      🎨 Point Colors:
-                    </h4>
-                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500 border border-green-600"></div>
-                        <p className="text-xs text-gray-700">
-                          Hull Points (on layers)
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500 border border-red-600"></div>
-                        <p className="text-xs text-gray-700">
-                          Removed Points (for spacing)
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-500 border border-blue-600"></div>
-                        <p className="text-xs text-gray-700">
-                          Inner Points (remaining)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
