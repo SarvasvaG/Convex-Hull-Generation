@@ -171,7 +171,7 @@ const Controls = ({
                     onClick={onToggleMazeHulls}
                     className="w-full px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg"
                   >
-                    {showMazeHulls ? "� Hide Hulls" : "◻️ Show Hulls"}
+                    {showMazeHulls ? "🎨 Show Curves" : "◻️ Show Walls"}
                   </button>
                 )}
 

@@ -66,20 +66,25 @@ const MazeCanvas = forwardRef(
 
       const { layers, mazeData, centroid } = onionData;
 
-      // Draw all layers with smooth curves
-      if (mazeData.smoothCurves && mazeData.smoothCurves.length > 0) {
-        drawSmoothMazeWalls(ctx, mazeData.smoothCurves, mazeData.edgesToRemove);
-      } else {
-        // Fallback to straight edges if smooth curves not available
+      // Toggle between smooth curves and hulls based on showHulls prop
+      if (showHulls) {
+        // Show ONLY hulls (straight edges) when showHulls is true
         drawMazeWalls(ctx, mazeData.edgesToKeep);
+      } else {
+        // Show smoothed Bézier curves when showHulls is false (default)
+        if (mazeData.smoothCurves && mazeData.smoothCurves.length > 0) {
+          drawSmoothMazeWalls(
+            ctx,
+            mazeData.smoothCurves,
+            mazeData.edgesToRemove
+          );
+        } else {
+          // Fallback to straight edges if smooth curves not available
+          drawMazeWalls(ctx, mazeData.edgesToKeep);
+        }
       }
 
       // Passages are no longer drawn - they are just gaps in the walls
-
-      // Draw dotted convex hulls if enabled
-      if (showHulls && layers && layers.length > 0) {
-        drawDottedHulls(ctx, layers);
-      }
 
       // Draw start position
       if (mazeData.startPosition) {
