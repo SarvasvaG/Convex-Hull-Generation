@@ -54,6 +54,43 @@ function distanceSquared(p1, p2) {
 }
 
 /**
+ * Calculate the minimum distance from a point to a line segment
+ * @param {object} point - The point
+ * @param {object} lineStart - Start of line segment
+ * @param {object} lineEnd - End of line segment
+ * @returns {number} Minimum distance from point to line segment
+ */
+function distanceToLineSegment(point, lineStart, lineEnd) {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+
+  // If the line segment is just a point
+  if (dx === 0 && dy === 0) {
+    return Math.sqrt(distanceSquared(point, lineStart));
+  }
+
+  // Calculate the parameter t for the projection of point onto the line
+  // t represents the position along the line segment (0 = start, 1 = end)
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) /
+        (dx * dx + dy * dy)
+    )
+  );
+
+  // Calculate the closest point on the line segment
+  const closestPoint = {
+    x: lineStart.x + t * dx,
+    y: lineStart.y + t * dy,
+  };
+
+  // Return the distance from the point to the closest point on the segment
+  return Math.sqrt(distanceSquared(point, closestPoint));
+}
+
+/**
  * Finds the orientation of ordered triplet (p, q, r)
  * @param {object} p - Point p
  * @param {object} q - Point q
@@ -242,21 +279,29 @@ export function calculateCentroid(points) {
 
 /**
  * Onion Decomposition - Recursively find convex hulls until less than 3 points remain
+ * Filters out points too close to hull edges to ensure clear spacing between layers
  * @param {Array<object>} points - Array of all points
- * @returns {object} Object containing layers, innermost centroid, and maze data
+ * @param {number} edgeProximityThreshold - Minimum distance from hull edges (default: 15 pixels)
+ * @returns {object} Object containing layers, innermost centroid, maze data, and removed points count
  */
-export function onionDecomposition(points) {
+export function onionDecomposition(points, edgeProximityThreshold = 15) {
   if (!points || points.length < 3) {
     return {
       layers: [],
       innerPoints: points || [],
       centroid: null,
       mazeData: null,
+      removedPointsCount: 0,
+      removedPoints: [],
+      allHullPoints: [],
     };
   }
 
   const layers = [];
   let remainingPoints = [...points];
+  let totalRemovedPoints = 0;
+  const removedPoints = []; // Track actual removed points
+  const allHullPoints = []; // Track all points that are on any hull
 
   // Keep finding convex hulls until we have less than 3 points
   while (remainingPoints.length >= 3) {
@@ -265,15 +310,51 @@ export function onionDecomposition(points) {
 
     if (hullPoints.length < 3) break;
 
+    // Collect all hull points
+    allHullPoints.push(...hullPoints);
+
     layers.push({
       hull: hullPoints,
       layerIndex: layers.length,
     });
 
     // Filter out points that are on the hull boundary
-    remainingPoints = remainingPoints.filter(
+    const pointsNotOnBoundary = remainingPoints.filter(
       (point) => !isPointOnHullBoundary(point, hullPoints)
     );
+
+    // Additionally filter out points that are too close to any hull edge
+    const filteredPoints = [];
+    pointsNotOnBoundary.forEach((point) => {
+      let tooClose = false;
+
+      // Check distance from point to all edges of the current hull
+      for (let i = 0; i < hullPoints.length; i++) {
+        const edgeStart = hullPoints[i];
+        const edgeEnd = hullPoints[(i + 1) % hullPoints.length];
+
+        const distanceToEdge = distanceToLineSegment(point, edgeStart, edgeEnd);
+
+        // If point is too close to any edge, mark it for removal
+        if (distanceToEdge < edgeProximityThreshold) {
+          tooClose = true;
+          break;
+        }
+      }
+
+      if (tooClose) {
+        removedPoints.push(point); // Track removed point
+      } else {
+        filteredPoints.push(point); // Keep point
+      }
+    });
+
+    // Count removed points in this iteration
+    const removedInThisLayer =
+      pointsNotOnBoundary.length - filteredPoints.length;
+    totalRemovedPoints += removedInThisLayer;
+
+    remainingPoints = filteredPoints;
   }
 
   // Calculate centroid of innermost layer or remaining points
@@ -295,6 +376,9 @@ export function onionDecomposition(points) {
     innerPoints: remainingPoints,
     centroid: centroid,
     mazeData: mazeData,
+    removedPointsCount: totalRemovedPoints,
+    removedPoints: removedPoints,
+    allHullPoints: allHullPoints,
   };
 }
 
