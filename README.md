@@ -120,11 +120,11 @@ src/
 
 **Group-3 Members:**
 
-| Name               | Roll Number | GitHub                                     |
-| ------------------ | ----------- | ------------------------------------------ |
-| **Raman Sharma**   | 22114076    | -                                          |
-| **Ayush Ranjan**   | 22114018    | -                                          |
-| **Sarvasva Gupta** | 22114086    | [@SarvasvaG](https://github.com/SarvasvaG) |
+| Name               | Roll Number |
+| ------------------ | ----------- |
+| **Raman Sharma**   | 22114076    |
+| **Ayush Ranjan**   | 22114018    |
+| **Sarvasva Gupta** | 22114086    |
 
 **Course**: Computational Geometry  
 **Institution**: Indian Institute of Technology Roorkee  
