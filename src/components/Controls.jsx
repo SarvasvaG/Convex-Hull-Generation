@@ -50,8 +50,8 @@ const Controls = ({
       return;
     }
 
-    if (num > 100) {
-      setError("Please enter a number less than or equal to 100");
+    if (num > 200) {
+      setError("Please enter a number less than or equal to 200");
       return;
     }
 
@@ -125,13 +125,13 @@ const Controls = ({
                 htmlFor="numPoints"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Number of Points (3-100)
+                Number of Points (3-200)
               </label>
               <input
                 id="numPoints"
                 type="number"
                 min="3"
-                max="100"
+                max="200"
                 value={numPoints}
                 onChange={handleNumPointsChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

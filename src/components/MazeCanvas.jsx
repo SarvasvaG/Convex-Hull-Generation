@@ -104,68 +104,7 @@ const MazeCanvas = forwardRef(
         mazeData.startPosition,
         mazeData.endPosition
       );
-
-      // Draw color-coded points when showHulls is enabled
-      if (showHulls && points && points.length > 0 && onionData) {
-        drawColorCodedPoints(ctx, points, onionData);
-      }
     }, [points, onionData, showHulls, backgroundImage]);
-
-    /**
-     * Draw points with different colors based on their role:
-     * - Hull points (on convex hulls): Green
-     * - Removed points (filtered for spacing): Red
-     * - Inner points (remaining): Blue
-     */
-    const drawColorCodedPoints = (ctx, allPoints, onionData) => {
-      const {
-        allHullPoints = [],
-        removedPoints = [],
-        innerPoints = [],
-      } = onionData;
-
-      // Create sets for fast lookup
-      const hullPointsSet = new Set(allHullPoints.map((p) => `${p.x},${p.y}`));
-      const removedPointsSet = new Set(
-        removedPoints.map((p) => `${p.x},${p.y}`)
-      );
-      const innerPointsSet = new Set(innerPoints.map((p) => `${p.x},${p.y}`));
-
-      allPoints.forEach((point) => {
-        const key = `${point.x},${point.y}`;
-        let fillColor, strokeColor, radius;
-
-        if (hullPointsSet.has(key)) {
-          // Hull points: Green
-          fillColor = "rgba(34, 197, 94, 0.7)"; // green-500 with transparency
-          strokeColor = "#16a34a"; // green-600
-          radius = 4;
-        } else if (removedPointsSet.has(key)) {
-          // Removed points: Red
-          fillColor = "rgba(239, 68, 68, 0.6)"; // red-500 with transparency
-          strokeColor = "#dc2626"; // red-600
-          radius = 3;
-        } else if (innerPointsSet.has(key)) {
-          // Inner points: Blue
-          fillColor = "rgba(59, 130, 246, 0.6)"; // blue-500 with transparency
-          strokeColor = "#2563eb"; // blue-600
-          radius = 3;
-        } else {
-          // Fallback for any other points: Light gray
-          fillColor = "rgba(148, 163, 184, 0.4)"; // slate-400 with transparency
-          strokeColor = "#94a3b8"; // slate-400
-          radius = 2;
-        }
-
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = fillColor;
-        ctx.fill();
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      });
-    };
 
     const drawDottedHulls = (ctx, layers) => {
       // Layer colors with low opacity
@@ -564,41 +503,41 @@ const MazeCanvas = forwardRef(
     };
 
     const drawStartPosition = (ctx, startPosition) => {
-      // Draw a circle background
+      // Draw a smaller circle background
       ctx.beginPath();
-      ctx.arc(startPosition.x, startPosition.y, 25, 0, 2 * Math.PI);
+      ctx.arc(startPosition.x, startPosition.y, 15, 0, 2 * Math.PI);
       ctx.fillStyle = "#22c55e";
       ctx.fill();
       ctx.strokeStyle = "#16a34a";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Draw start emoji
-      drawEmoji(ctx, START_EMOJI, startPosition.x, startPosition.y, 30);
+      // Draw smaller start emoji
+      drawEmoji(ctx, START_EMOJI, startPosition.x, startPosition.y, 18);
 
-      // Draw label
-      ctx.font = "bold 12px Arial";
+      // Draw smaller label
+      ctx.font = "bold 9px Arial";
       ctx.fillStyle = "#16a34a";
-      ctx.fillText("START", startPosition.x, startPosition.y + 40);
+      ctx.fillText("START", startPosition.x, startPosition.y + 26);
     };
 
     const drawEndPosition = (ctx, endPosition) => {
-      // Draw a circle background
+      // Draw a smaller circle background
       ctx.beginPath();
-      ctx.arc(endPosition.x, endPosition.y, 25, 0, 2 * Math.PI);
+      ctx.arc(endPosition.x, endPosition.y, 15, 0, 2 * Math.PI);
       ctx.fillStyle = "#fbbf24";
       ctx.fill();
       ctx.strokeStyle = "#f59e0b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Draw end emoji
-      drawEmoji(ctx, END_EMOJI, endPosition.x, endPosition.y, 30);
+      // Draw smaller end emoji
+      drawEmoji(ctx, END_EMOJI, endPosition.x, endPosition.y, 18);
 
-      // Draw label
-      ctx.font = "bold 12px Arial";
+      // Draw smaller label
+      ctx.font = "bold 9px Arial";
       ctx.fillStyle = "#f59e0b";
-      ctx.fillText("END", endPosition.x, endPosition.y + 40);
+      ctx.fillText("END", endPosition.x, endPosition.y + 26);
     };
 
     const drawWelcomeMessage = (ctx) => {
