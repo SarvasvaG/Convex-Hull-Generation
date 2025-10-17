@@ -380,7 +380,7 @@ function App() {
                 <h3 className="text-lg font-bold text-gray-800 mb-3">
                   🎁 Maze Statistics
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                     <p className="text-xs text-amber-600 font-medium">Layers</p>
                     <p className="text-2xl font-bold text-amber-900">
@@ -393,6 +393,12 @@ function App() {
                     </p>
                     <p className="text-2xl font-bold text-blue-900">
                       {points.length}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                    <p className="text-xs text-red-600 font-medium">Removed</p>
+                    <p className="text-2xl font-bold text-red-900">
+                      {onionData.removedPointsCount || 0}
                     </p>
                   </div>
                 </div>
@@ -414,6 +420,35 @@ function App() {
                     </p>
                   </div>
                 </div>
+
+                {/* Point Color Legend - shown when hulls are visible */}
+                {showMazeHulls && (
+                  <div className="mt-3">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                      🎨 Point Colors:
+                    </h4>
+                    <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500 border border-green-600"></div>
+                        <p className="text-xs text-gray-700">
+                          Hull Points (on layers)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500 border border-red-600"></div>
+                        <p className="text-xs text-gray-700">
+                          Removed Points (for spacing)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500 border border-blue-600"></div>
+                        <p className="text-xs text-gray-700">
+                          Inner Points (remaining)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
